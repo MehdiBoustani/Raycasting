@@ -13,6 +13,13 @@
 #include <DoubleBuffer.h>
 #include <util.h>
 
+#include <thread>
+#include <mutex>
+#include <atomic>
+
+std::mutex playerMutex;
+std::atomic<bool> stillRunning(true);
+
 struct ProgramArguments
 {
     int screenWidth;

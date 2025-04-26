@@ -12,6 +12,27 @@
 #include <UDPSender.h>
 #include <DoubleBuffer.h>
 #include <util.h>
+#include <mutex>
+#include <thread>
+#include <atomic>
+
+
+std::mutex keysMutex;
+unsigned int gKeysPressed = 0;
+std::atomic<bool> stillRunning(true);
+
+void handleWindow(WindowManager& window){
+    while(stillRunning){
+      window.updateDisplay();
+        window.updateInput();
+        {
+            std::lock_guard<std::mutex> lock(keysMutex);
+            gKeysPressed = window.getKeysPressed();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
 
 struct ProgramArguments
 {
@@ -66,6 +87,8 @@ int main(int argc, char *argv[])
 
     Average fpsCounter(1.0);
 
+    std::thread windowThread(handleWindow, std::ref(windowManager));
+
     while (true)
     {
         raycaster.castFloorCeiling();
@@ -82,10 +105,12 @@ int main(int argc, char *argv[])
         fpsCounter.update(1.0 / frameTime);
         std::cout << "\r" << std::to_string(int(fpsCounter.get())) << " FPS" << std::flush;
 
-        windowManager.updateDisplay();
-        windowManager.updateInput();
+        unsigned int keys;
+        {
+            std::lock_guard<std::mutex> lock(keysMutex);
+            keys = gKeysPressed;
+        }
 
-        unsigned int keys = windowManager.getKeysPressed();
         if (keys & WindowManager::KEY_UP)
             player.move(frameTime);
         if (keys & WindowManager::KEY_DOWN)
@@ -95,6 +120,7 @@ int main(int argc, char *argv[])
         if (keys & WindowManager::KEY_LEFT)
             player.turn(frameTime);
         if (keys & WindowManager::KEY_ESC)
+            stillRunning = false;
             break;
 
         // Send position to other players
@@ -105,8 +131,10 @@ int main(int argc, char *argv[])
         for (size_t i = 0; i < nbPlayers; i++)
         {
             UDPData data = udpReceiver.receive();
-            if (!data.valid)
+            if (!data.valid){
+                stillRunning = false;
                 break;
+            }
             // Update the player's index if it is the first time we receive data from them
             if (playersIndexes.find(data.sender) == playersIndexes.end())
             {
