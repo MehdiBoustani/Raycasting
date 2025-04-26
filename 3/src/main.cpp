@@ -20,6 +20,24 @@
 std::mutex playerMutex;
 std::atomic<bool> stillRunning(true);
 
+void receiverThread(UDPReceiver &udpReceiver, Map &map, std::map<std::string, int> &playerIdx, int &nextPlayerIdx, int nbPlayers){
+  while(stillRunning){
+    UDPData data = udpReceiver.receive();
+    if (!data.valid)
+      stillRunning = false;
+      break;
+
+    std::lock_guard<std::mutex> lock(playerMutex);
+    if(playerIdx.find(data.sender) == playerIdx.end()){
+        playerIdx[data.sender] = nextPlayerIdx++;
+        nextPlayerIdx %= nbPlayers;
+    }
+
+   int index = playerIdx[data.sender];
+    map.movePlayer(index, data.position.x(), data.position.y());
+  }
+}
+
 struct ProgramArguments
 {
     int screenWidth;
@@ -73,6 +91,8 @@ int main(int argc, char *argv[])
 
     Average fpsCounter(1.0);
 
+    std::thread positionsThread(receiverThread, std::ref(udpReceiver), std::ref(map), std::ref(playersIndexes), std::ref(nextPlayerIndex), nbPlayers);
+
     while (true)
     {
         raycaster.castFloorCeiling();
@@ -107,21 +127,7 @@ int main(int argc, char *argv[])
         // Send position to other players
         for (auto &udpSender : udpSenders)
             udpSender->send(player.posX(), player.posY());
-
-        // Receive other players' positions and update them
-        for (size_t i = 0; i < nbPlayers; i++)
-        {
-            UDPData data = udpReceiver.receive();
-            if (!data.valid)
-                break;
-            // Update the player's index if it is the first time we receive data from them
-            if (playersIndexes.find(data.sender) == playersIndexes.end())
-            {
-                playersIndexes[data.sender] = nextPlayerIndex++;
-                nextPlayerIndex %= nbPlayers;
-            }
-            int index = playersIndexes[data.sender];
-            map.movePlayer(index, data.position.x(), data.position.y());
-        }
     }
+    stillRunning = false;
+    positionsThread.join();
 }

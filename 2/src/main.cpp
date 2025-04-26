@@ -145,4 +145,6 @@ int main(int argc, char *argv[])
             map.movePlayer(index, data.position.x(), data.position.y());
         }
     }
+    stillRunning = false;
+    windowThread.join();
 }
