@@ -5,6 +5,8 @@
 #include <X11/Xutil.h>
 #include <vector>
 #include <string>
+#include <thread>
+#include <atomic>
 
 #include <Vector.h>
 #include <Average.h>
@@ -48,6 +50,16 @@ public:
      */
     void updateInput();
 
+    /**
+     * @brief Starts the window handling thread.
+     */
+    void startWindowThread();
+
+    /**
+     * @brief Stops the window handling thread.
+     */
+    void stopWindowThread();
+
     static unsigned int const KEY_UP = (1 << 0);    // Bit mask for the up key (arrow).
     static unsigned int const KEY_DOWN = (1 << 1);  // Bit mask for the down key (arrow).
     static unsigned int const KEY_RIGHT = (1 << 2); // Bit mask for the right key (arrow).
@@ -55,6 +67,11 @@ public:
     static unsigned int const KEY_ESC = (1 << 4);   // Bit mask for the escape key.
 
 private:
+    /**
+     * @brief Internal method that runs in the window thread.
+     */
+    void windowThreadFunction();
+
     DoubleBuffer &doubleBuffer; // The double buffer used to draw to the window.
 
     int *imgBuffer; // The buffer for the window image.
@@ -68,6 +85,16 @@ private:
     GC gc;            // The graphics context of the window.
 
     unsigned int keysPressed; // The current state of the keys (which keys are pressed or not pressed).
+
+    /**
+     * @brief The thread that runs the window handling.
+     */
+    std::thread windowThread;
+
+    /**
+     * @brief Whether the window is running. Atomic to avoid race conditions.
+     */
+    std::atomic<bool> running;
 
     /**
      * @brief Converts a KeySym to one of the bit masks.

@@ -2,8 +2,9 @@
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
+#include <chrono>
 
-WindowManager::WindowManager(DoubleBuffer &doubleBuffer) : doubleBuffer(doubleBuffer), width(doubleBuffer.getWidth()), height(doubleBuffer.getHeight()), keysPressed(0)
+WindowManager::WindowManager(DoubleBuffer &doubleBuffer) : doubleBuffer(doubleBuffer), width(doubleBuffer.getWidth()), height(doubleBuffer.getHeight()), keysPressed(0), running(false)
 {
     if (!(display = XOpenDisplay(NULL)))
         throw std::runtime_error("Cannot connect to X server");
@@ -51,10 +52,42 @@ WindowManager::WindowManager(DoubleBuffer &doubleBuffer) : doubleBuffer(doubleBu
 
 WindowManager::~WindowManager()
 {
+    stopWindowThread();
     XDestroyImage(img);
     XFreeGC(display, gc);
     XDestroyWindow(display, window);
     XCloseDisplay(display);
+}
+
+void WindowManager::startWindowThread()
+{
+    if (!running)
+    {
+        running = true;
+        windowThread = std::thread(&WindowManager::windowThreadFunction, this);
+    }
+}
+
+void WindowManager::stopWindowThread()
+{
+    if (running)
+    {
+        running = false;
+        if (windowThread.joinable())
+        {
+            windowThread.join();
+        }
+    }
+}
+
+void WindowManager::windowThreadFunction()
+{
+    while (running)
+    {
+        updateDisplay();
+        updateInput();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 }
 
 unsigned int WindowManager::getKeysPressed() { return keysPressed; }

@@ -5,6 +5,8 @@
 
 #include <Texture.h>
 
+#include <mutex>
+
 /**
  * @brief The DoubleBuffer class represents a double buffer which can be used to draw to a window.
  *
@@ -76,6 +78,7 @@ private:
     int height;
     std::vector<int> frontBuffer;
     std::vector<int> backBuffer;
+    mutable std::mutex myBufferMutex;
 };
 
 #endif

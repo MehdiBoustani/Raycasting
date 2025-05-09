@@ -4,12 +4,18 @@ DoubleBuffer::DoubleBuffer(int width, int height) : width(width), height(height)
 {
 }
 
-const std::vector<int> &DoubleBuffer::getBackBuffer() const { return backBuffer; }
+const std::vector<int> &DoubleBuffer::getBackBuffer() const
+{
+    std::lock_guard<std::mutex> lock(myBufferMutex);
+    return backBuffer;
+}
+
 int DoubleBuffer::getWidth() const { return width; }
 int DoubleBuffer::getHeight() const { return height; }
 
 void DoubleBuffer::drawVertLine(int x, int yStart, int yEnd, int lineHeight, Texture &texture, int texX, bool darken)
 {
+    std::lock_guard<std::mutex> lock(myBufferMutex);
     double step = double(texture.getHeight()) / lineHeight;
     double texY = (yStart - height / 2 + lineHeight / 2) * step;
     for (int y = yStart; y <= yEnd; y++)
@@ -24,10 +30,12 @@ void DoubleBuffer::drawVertLine(int x, int yStart, int yEnd, int lineHeight, Tex
 
 void DoubleBuffer::drawPixel(int x, int y, unsigned int color)
 {
+    std::lock_guard<std::mutex> lock(myBufferMutex);
     frontBuffer[x + y * width] = color;
 }
 
 void DoubleBuffer::swap()
 {
+    std::lock_guard<std::mutex> lock(myBufferMutex);
     frontBuffer.swap(backBuffer);
 }
