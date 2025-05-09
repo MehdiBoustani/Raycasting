@@ -79,10 +79,16 @@ int main(int argc, char *argv[])
         fpsCounter.update(1.0 / frameTime);
         std::cout << "\r" << std::to_string(int(fpsCounter.get())) << " FPS" << std::flush;
 
+        // Update the display to show the current frame
         windowManager.updateDisplay();
+
+        // Update the input to get the current keys pressed
         windowManager.updateInput();
 
+        // Get the current keys pressed
         unsigned int keys = windowManager.getKeysPressed();
+
+        // Update the player position based on the keys pressed
         if (keys & WindowManager::KEY_UP)
             player.move(frameTime);
         if (keys & WindowManager::KEY_DOWN)

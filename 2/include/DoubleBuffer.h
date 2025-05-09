@@ -78,7 +78,7 @@ private:
     int height;
     std::vector<int> frontBuffer;
     std::vector<int> backBuffer;
-    mutable std::mutex myBufferMutex;
+    mutable std::mutex myBufferMutex; // Mutex for protecting the buffer
 };
 
 #endif

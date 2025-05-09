@@ -61,6 +61,7 @@ WindowManager::~WindowManager()
 
 void WindowManager::startWindowThread()
 {
+    // If the thread is not running, we start it
     if (!running)
     {
         running = true;
@@ -69,10 +70,13 @@ void WindowManager::startWindowThread()
 }
 
 void WindowManager::stopWindowThread()
-{
+{   
+    // If the thread is not running, we don't need to stop it
     if (running)
     {
         running = false;
+
+        // If the thread is joinable, we join it
         if (windowThread.joinable())
         {
             windowThread.join();
@@ -84,8 +88,13 @@ void WindowManager::windowThreadFunction()
 {
     while (running)
     {
+        // Update the display to show the current frame
         updateDisplay();
+
+        // Update the input
         updateInput();
+
+        // Sleep for 10 milliseconds to avoid busy-waiting
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }

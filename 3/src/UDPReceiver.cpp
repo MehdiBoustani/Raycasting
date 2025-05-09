@@ -32,12 +32,20 @@ UDPReceiver::~UDPReceiver()
 
 void UDPReceiver::startThread(Map& map, int nbPlayers)
 {
+    // If the thread is already running, we don't start it again
     if (stillRunning)
         return;
 
+    // We set the map and the number of players
     gameMap = &map;
+
+    // We set the number of players
     numPlayers = nbPlayers;
+
+    // Flag to control thread execution
     stillRunning = true;
+
+    // We initialize the thread with the receiverThread function and the current object
     thread = std::thread(&UDPReceiver::receiverThread, this);
 }
 
@@ -60,13 +68,21 @@ void UDPReceiver::receiverThread()
             continue;
 
         std::lock_guard<std::mutex> lock(playerMutex);
+
+        // If the player is not in the map, we add it
         if(playerIdx.find(data.sender) == playerIdx.end())
         {
+            // We add the player to the map
             playerIdx[data.sender] = nextPlayerIdx++;
+
+            // We make sure the index is not greater than the number of players
             nextPlayerIdx %= numPlayers;
         }
 
+        // We get the index of the player
         int index = playerIdx[data.sender];
+
+        // We move the player to the new position
         gameMap->movePlayer(index, data.position.x(), data.position.y());
     }
 }

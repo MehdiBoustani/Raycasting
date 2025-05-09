@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
 
     Average fpsCounter(1.0);
 
+    // Start the window thread
     windowManager.startWindowThread();
 
     while (true)
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
         raycaster.castWalls();
         raycaster.castSprites();
 
-        doubleBuffer.swap();
+        doubleBuffer.swap(); // Swap is now thread safe
 
         oldTime = time;
         time = std::chrono::system_clock::now();

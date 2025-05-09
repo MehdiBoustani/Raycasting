@@ -39,7 +39,6 @@ public:
 
     /**
      * @brief Notifies the sender thread that the position has changed.
-     * This will trigger sending the new position to the destination.
      *
      * @param x The x coordinate to send.
      * @param y The y coordinate to send.
@@ -57,7 +56,7 @@ private:
     std::thread thread;                  // The sender thread
     std::mutex mutex;                    // Mutex for protecting shared data
     std::condition_variable condition;   // Condition variable for thread synchronization
-    std::atomic<bool> stillRunning;      // Flag to control thread execution
+    std::atomic<bool> stillRunning;      // Flag to control thread execution (atomic to avoid race conditions)
     
     // Current position to send
     double currentX;

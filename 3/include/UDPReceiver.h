@@ -58,6 +58,9 @@ public:
     UDPData receive();
 
 private:
+    /**
+     * @brief The receiver thread.
+     */
     void receiverThread();
 
     int sockfd;                          // The socket file descriptor.

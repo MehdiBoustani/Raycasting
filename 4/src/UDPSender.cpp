@@ -29,10 +29,13 @@ UDPSender::~UDPSender()
 
 void UDPSender::startThread()
 {
+    // If the thread is already running, we don't start it again
     if (stillRunning)
         return;
 
     stillRunning = true;
+
+    // We initialize the thread with the senderThread function and the current object
     thread = std::thread(&UDPSender::senderThread, this);
 }
 
@@ -42,6 +45,7 @@ void UDPSender::stopThread()
         return;
 
     {
+        // Mutex to protect the stillRunning flag
         std::lock_guard<std::mutex> lock(mutex);
         stillRunning = false;
     }
@@ -64,11 +68,14 @@ void UDPSender::senderThread()
 {
     while (true)
     {
+        // We used a unique_lock to avoid deadlocks when waiting for the condition variable.
+        // The simple lock guard would have been enough, but we wanted to be sure that the lock is released when the thread is waiting.
         std::unique_lock<std::mutex> lock(mutex);
         
         // Wait until position changes or thread should stop
         condition.wait(lock, [this] { return positionChanged || !stillRunning; });
         
+        // If the thread should stop, we break the loop
         if (!stillRunning)
             break;
 
