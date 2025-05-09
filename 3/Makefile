@@ -13,7 +13,10 @@ CXXFLAGS := -std=c++11 -I$(INCLUDE_DIR) -Wall -W -O3 -fopenmp
 LDFLAGS := -lX11 -fopenmp
 
 # Targets
-all: $(EXECUTABLE)
+all: $(BUILD_DIR) $(EXECUTABLE)
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
 $(EXECUTABLE): $(OBJ_FILES)
 	$(CXX) $^ -o $@ $(LDFLAGS)

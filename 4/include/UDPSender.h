@@ -3,6 +3,10 @@
 
 #include <netinet/in.h>
 #include <string>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 /**
  * @brief The UDPSender class is responsible for sending position data using the UDP protocol.
@@ -24,18 +28,41 @@ public:
     ~UDPSender();
 
     /**
-     * @brief Sends the given x and y coordinates as a UDP packet.
+     * @brief Starts the sender thread.
+     */
+    void startThread();
+
+    /**
+     * @brief Stops the sender thread.
+     */
+    void stopThread();
+
+    /**
+     * @brief Notifies the sender thread that the position has changed.
+     * This will trigger sending the new position to the destination.
      *
      * @param x The x coordinate to send.
      * @param y The y coordinate to send.
      */
-    void send(double x, double y);
+    void notifyPositionChanged(double x, double y);
 
 private:
+    void senderThread();
+
     int sockfd;                          // The socket file descriptor.
     double buffer[2];                    // The buffer to store the coordinates.
     sockaddr_in addr;                    // The address structure for the destination IP and port.
     int bufferSize = 2 * sizeof(double); // The size of the buffer.
+
+    std::thread thread;                  // The sender thread
+    std::mutex mutex;                    // Mutex for protecting shared data
+    std::condition_variable condition;   // Condition variable for thread synchronization
+    std::atomic<bool> stillRunning;      // Flag to control thread execution
+    
+    // Current position to send
+    double currentX;
+    double currentY;
+    bool positionChanged;                // Flag indicating if position has changed
 };
 
 #endif

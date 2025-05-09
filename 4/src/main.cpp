@@ -49,7 +49,10 @@ int main(int argc, char *argv[])
     NetworkData data = parseIPs(args.ipsPath);
     UDPReceiver udpReceiver(data.listeningPort);
     for (auto ipPort : data.ipPorts)
+    {
         udpSenders.push_back(std::unique_ptr<UDPSender>(new UDPSender(ipPort.first, ipPort.second)));
+        udpSenders.back()->startThread();
+    }
     size_t nbPlayers = udpSenders.size();
 
     // Indexes used to identify other players
@@ -85,21 +88,37 @@ int main(int argc, char *argv[])
         windowManager.updateDisplay();
         windowManager.updateInput();
 
+        bool playerMoved = false;
         unsigned int keys = windowManager.getKeysPressed();
         if (keys & WindowManager::KEY_UP)
+        {
             player.move(frameTime);
+            playerMoved = true;
+        }
         if (keys & WindowManager::KEY_DOWN)
+        {
             player.move(-frameTime);
+            playerMoved = true;
+        }
         if (keys & WindowManager::KEY_RIGHT)
+        {
             player.turn(-frameTime);
+            playerMoved = true;
+        }
         if (keys & WindowManager::KEY_LEFT)
+        {
             player.turn(frameTime);
+            playerMoved = true;
+        }
         if (keys & WindowManager::KEY_ESC)
             break;
 
-        // Send position to other players
-        for (auto &udpSender : udpSenders)
-            udpSender->send(player.posX(), player.posY());
+        // Notify all senders if player moved
+        if (playerMoved)
+        {
+            for (auto& sender : udpSenders)
+                sender->notifyPositionChanged(player.posX(), player.posY());
+        }
 
         // Receive other players' positions and update them
         for (size_t i = 0; i < nbPlayers; i++)

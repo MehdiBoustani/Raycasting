@@ -1,6 +1,4 @@
-#include <chrono>
 #include <iostream>
-#include <map>
 #include <memory>
 
 #include <Average.h>
@@ -12,31 +10,6 @@
 #include <UDPSender.h>
 #include <DoubleBuffer.h>
 #include <util.h>
-
-#include <thread>
-#include <mutex>
-#include <atomic>
-
-std::mutex playerMutex;
-std::atomic<bool> stillRunning(true);
-
-void receiverThread(UDPReceiver &udpReceiver, Map &map, std::map<std::string, int> &playerIdx, int &nextPlayerIdx, int nbPlayers){
-  while(stillRunning){
-    UDPData data = udpReceiver.receive();
-    if (!data.valid)
-      stillRunning = false;
-      break;
-
-    std::lock_guard<std::mutex> lock(playerMutex);
-    if(playerIdx.find(data.sender) == playerIdx.end()){
-        playerIdx[data.sender] = nextPlayerIdx++;
-        nextPlayerIdx %= nbPlayers;
-    }
-
-   int index = playerIdx[data.sender];
-    map.movePlayer(index, data.position.x(), data.position.y());
-  }
-}
 
 struct ProgramArguments
 {
@@ -77,21 +50,18 @@ int main(int argc, char *argv[])
         udpSenders.push_back(std::unique_ptr<UDPSender>(new UDPSender(ipPort.first, ipPort.second)));
     size_t nbPlayers = udpSenders.size();
 
-    // Indexes used to identify other players
-    int nextPlayerIndex = 0;
-    std::map<std::string, int> playersIndexes; // Maps IP addresses and ports to player indexes
-
     Map map = Map::generateMap(nbPlayers);
     Player player({22, 11.5}, {-1, 0}, {0, 0.66}, 5, 3, map);
     DoubleBuffer doubleBuffer(screenWidth, screenHeight);
     WindowManager windowManager(doubleBuffer);
     Raycaster raycaster(player, doubleBuffer, map);
 
+    // Start the receiver thread
+    udpReceiver.startThread(map, nbPlayers);
+
     std::chrono::time_point<std::chrono::system_clock> time = std::chrono::system_clock::now(), oldTime;
 
     Average fpsCounter(1.0);
-
-    std::thread positionsThread(receiverThread, std::ref(udpReceiver), std::ref(map), std::ref(playersIndexes), std::ref(nextPlayerIndex), nbPlayers);
 
     while (true)
     {
@@ -128,6 +98,4 @@ int main(int argc, char *argv[])
         for (auto &udpSender : udpSenders)
             udpSender->send(player.posX(), player.posY());
     }
-    stillRunning = false;
-    positionsThread.join();
 }

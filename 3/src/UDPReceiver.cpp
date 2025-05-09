@@ -4,7 +4,7 @@
 
 #include <UDPReceiver.h>
 
-UDPReceiver::UDPReceiver(int port)
+UDPReceiver::UDPReceiver(int port) : stillRunning(false), nextPlayerIdx(0), gameMap(nullptr), numPlayers(0)
 {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
@@ -26,7 +26,49 @@ UDPReceiver::UDPReceiver(int port)
 
 UDPReceiver::~UDPReceiver()
 {
+    stopThread();
     close(sockfd);
+}
+
+void UDPReceiver::startThread(Map& map, int nbPlayers)
+{
+    if (stillRunning)
+        return;
+
+    gameMap = &map;
+    numPlayers = nbPlayers;
+    stillRunning = true;
+    thread = std::thread(&UDPReceiver::receiverThread, this);
+}
+
+void UDPReceiver::stopThread()
+{
+    if (!stillRunning)
+        return;
+
+    stillRunning = false;
+    if (thread.joinable())
+        thread.join();
+}
+
+void UDPReceiver::receiverThread()
+{
+    while(stillRunning)
+    {
+        UDPData data = receive();
+        if (!data.valid)
+            continue;
+
+        std::lock_guard<std::mutex> lock(playerMutex);
+        if(playerIdx.find(data.sender) == playerIdx.end())
+        {
+            playerIdx[data.sender] = nextPlayerIdx++;
+            nextPlayerIdx %= numPlayers;
+        }
+
+        int index = playerIdx[data.sender];
+        gameMap->movePlayer(index, data.position.x(), data.position.y());
+    }
 }
 
 UDPData UDPReceiver::receive()
