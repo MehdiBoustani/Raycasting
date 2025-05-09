@@ -12,6 +12,7 @@
 #include <UDPSender.h>
 #include <DoubleBuffer.h>
 #include <util.h>
+#include <omp.h>
 
 struct ProgramArguments
 {
@@ -51,6 +52,10 @@ int main(int argc, char *argv[])
     for (auto ipPort : data.ipPorts)
         udpSenders.push_back(std::unique_ptr<UDPSender>(new UDPSender(ipPort.first, ipPort.second)));
     size_t nbPlayers = udpSenders.size();
+
+    // Set the number of threads to the number of threads available divided by the number of players
+    // This is to avoid contention on the network
+    omp_set_num_threads(omp_get_max_threads() / nbPlayers);
 
     // Indexes used to identify other players
     int nextPlayerIndex = 0;
